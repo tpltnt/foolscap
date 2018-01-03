@@ -50,6 +50,9 @@ class Listener(protocol.ServerFactory, service.Service):
         self._redirects = {}
 
     def startService(self):
+        """
+        Start the listener.
+        """
         service.Service.startService(self)
         d = self._ep.listen(self)
         def _listening(lp):
@@ -57,6 +60,9 @@ class Listener(protocol.ServerFactory, service.Service):
         d.addCallback(_listening)
 
     def stopService(self):
+        """
+        Stop the listener.
+        """
         service.Service.stopService(self)
         if self._lp:
             return self._lp.stopListening()
@@ -79,13 +85,23 @@ class Listener(protocol.ServerFactory, service.Service):
         return self._lp.getHost().port
 
     def __repr__(self):
+        """
+        String representation of a Listener object.
+        """
         return ("<Listener at 0x%x on %s with tub %s>" %
                 (abs(id(self)), str(self._ep), str(self._tub.tubID)))
 
     def addRedirect(self, tubID, location):
+        """
+        Add a redirect for a given tubID to a given location.
+        """
         assert tubID is not None
         self._redirects[tubID] = location
+
     def removeRedirect(self, tubID):
+        """
+        Remove redirect for given tubID.
+        """
         del self._redirects[tubID]
 
     def buildProtocol(self, addr):
@@ -103,6 +119,11 @@ class Listener(protocol.ServerFactory, service.Service):
         return proto
 
     def lookupTubID(self, tubID):
+        """
+        Look up the redirect for a given tubID.
+
+        :returns: tuple (tubID, redirect)
+        """
         tub = None
         if tubID == self._tub.tubID:
             tub = self._tub
@@ -195,6 +216,15 @@ class Tub(service.MultiService):
         return "<Tub id=%s>" % self.tubID
 
     def setupEncryptionFile(self, certFile):
+        """
+        Set up the encryption based on the content
+        of the given certificate file. If no file
+        could be found, a certificate is created
+        internally and saved under the name/path
+        provided by certFile.
+
+        :param certFile: certificate file to use
+        """
         try:
             certData = open(certFile, "rb").read()
         except EnvironmentError:
@@ -207,6 +237,13 @@ class Tub(service.MultiService):
             f.close()
 
     def setupEncryption(self, certData):
+        """
+        Process the given certificate data or create a new
+        one if no data is given. Set the internal tubID to
+        the SHA1 hash of the certificate data.
+
+        :param certData: certificate data to load
+        """
         if certData:
             cert = crypto.loadCertificate(certData)
         else:
@@ -273,6 +310,13 @@ class Tub(service.MultiService):
         self.accept_gifts = True
 
     def setOption(self, name, value):
+        """
+        Set an option based on the given key/value pair.
+
+        :param name: option to set
+        :type name: str
+        :param value: value to set option to
+        """
         if name == "logLocalFailures":
             # log (with log.err) any exceptions that occur during the
             # execution of a local Referenceable's method, which is invoked
@@ -409,13 +453,24 @@ class Tub(service.MultiService):
 
 
     def log(self, *args, **kwargs):
+        """
+        Log the given data and mark it with the internal tubID.
+        """
         kwargs['tubID'] = self.tubID
         return log.msg(*args, **kwargs)
 
     def createCertificate(self):
+        """
+        Create a certificate.
+        """
         return crypto.createCertificate()
 
     def getCertData(self):
+        """
+        Read PEM data from the (internal) certificate.
+
+        :returns: str
+        """
         # the string returned by this method can be used as the certData=
         # argument to create a new Tub with the same identity. TODO: actually
         # test this, I don't know if dump/keypair.newCertificate is the right
@@ -530,8 +585,15 @@ class Tub(service.MultiService):
         return self.listeners[:]
 
     def getTubID(self):
+        """
+        Get internal tubID.
+        """
         return self.tubID
+
     def getShortTubID(self):
+        """
+        Get shortened version of internal tubID.
+        """
         return self.tubID[:4]
 
     def getConnectionInfoForFURL(self, furl):
@@ -987,11 +1049,13 @@ class Tub(service.MultiService):
                 del self.brokers[tubref]
 
     def debug_listBrokers(self):
-        # return a list of (tubref, inbound, outbound) tuples. The tubref
-        # tells you which broker this is, 'inbound' is a list of
-        # InboundDelivery objects (one per outstanding inbound message), and
-        # 'outbound' is a list of PendingRequest objects (one per message
-        # that's waiting on a remote broker to complete).
+        """
+        Return a list of (tubref, inbound, outbound) tuples. The tubref
+        tells you which broker this is, 'inbound' is a list of
+        InboundDelivery objects (one per outstanding inbound message), and
+        'outbound' is a list of PendingRequest objects (one per message
+        that's waiting on a remote broker to complete).
+        """
         output = []
         all_brokers = list(self.brokers.items())
         for tubref, _broker in all_brokers:
