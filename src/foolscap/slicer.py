@@ -2,10 +2,10 @@
 
 from twisted.python.components import registerAdapter
 from twisted.python import log
-from zope.interface import implements
+from zope.interface import implementer
 from twisted.internet.defer import Deferred
-import tokens
-from tokens import Violation, BananaError
+from . import tokens
+from .tokens import Violation, BananaError
 from foolscap.ipb import IBroker
 
 class SlicerClass(type):
@@ -18,10 +18,8 @@ class SlicerClass(type):
             registerAdapter(self, typ, tokens.ISlicer)
 
 
-class BaseSlicer(object):
-    __metaclass__ = SlicerClass
-    implements(tokens.ISlicer)
-
+@implementer(tokens.ISlicer)
+class BaseSlicer(object, metaclass=SlicerClass):
     slices = None
 
     parent = None
@@ -43,9 +41,11 @@ class BaseSlicer(object):
     def registerRefID(self, refid, obj):
         # optimize: most Slicers will delegate this up to the Root
         return self.parent.registerRefID(refid, obj)
+
     def slicerForObject(self, obj):
         # optimize: most Slicers will delegate this up to the Root
         return self.parent.slicerForObject(obj)
+
     def slice(self, streamable, banana):
         # this is what makes us ISlicer
         self.streamable = streamable
@@ -54,8 +54,10 @@ class BaseSlicer(object):
             yield o
         for t in self.sliceBody(streamable, banana):
             yield t
+
     def sliceBody(self, streamable, banana):
         raise NotImplementedError
+
     def childAborted(self, f):
         return f
 
@@ -112,7 +114,7 @@ class ScopedSlicer(BaseSlicer):
         # rather than the blatantly wrong mangling that would occur with
         # re-used id(obj) values.
 
-        self.references[id(obj)] = (obj,refid)
+        self.references[id(obj)] = (obj, refid)
 
     def slicerForObject(self, obj):
         # check for an object which was sent previously or has at least
@@ -131,7 +133,7 @@ BananaUnslicerRegistry = {}
 def registerUnslicer(opentype, factory, registry=None):
     if registry is None:
         registry = UnslicerRegistry
-    assert not registry.has_key(opentype)
+    assert opentype not in registry
     registry[opentype] = factory
 
 class UnslicerClass(type):
@@ -143,10 +145,9 @@ class UnslicerClass(type):
         if opentype:
             registerUnslicer(opentype, self, reg)
 
-class BaseUnslicer(object):
-    __metaclass__ = UnslicerClass
+@implementer(tokens.IUnslicer)
+class BaseUnslicer(object, metaclass=UnslicerClass):
     opentype = None
-    implements(tokens.IUnslicer)
 
     def __init__(self):
         pass
@@ -260,13 +261,13 @@ class ScopedUnslicer(BaseUnslicer):
 
     def setObject(self, counter, obj):
         if self.protocol.debugReceive:
-            print "setObject(%s): %s{%s}" % (counter, obj, id(obj))
+            print("setObject(%s): %s{%s}" % (counter, obj, id(obj)))
         self.references[counter] = obj
 
     def getObject(self, counter):
         obj = self.references.get(counter)
         if self.protocol.debugReceive:
-            print "getObject(%s) -> %s{%s}" % (counter, obj, id(obj))
+            print("getObject(%s) -> %s{%s}" % (counter, obj, id(obj)))
         return obj
 
 
@@ -287,8 +288,9 @@ class ReferenceSlicer(BaseSlicer):
     trackReferences = False
 
     def __init__(self, refid):
-        assert type(refid) is int
+        assert isinstance(refid, int)
         self.refid = refid
+
     def sliceBody(self, streamable, banana):
         yield self.refid
 
@@ -301,7 +303,7 @@ class ReferenceUnslicer(LeafUnslicer):
     def setConstraint(self, constraint):
         self.constraint = constraint
 
-    def checkToken(self, typebyte,size):
+    def checkToken(self, typebyte, size):
         if typebyte != tokens.INT:
             raise BananaError("ReferenceUnslicer only accepts INTs")
 
