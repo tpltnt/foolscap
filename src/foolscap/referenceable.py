@@ -186,9 +186,9 @@ class CallableSlicer(slicer.BaseSlicer):
         return None # TODO: not quite ready yet
         # callables which are actually bound methods of a pb.Referenceable
         # can use the schema from that
-        s = ipb.IReferenceable(self.obj.im_self, None)
+        s = ipb.IReferenceable(self.obj.__self__, None)
         if s:
-            return s.getSchemaForMethodNamed(self.obj.im_func.__name__)
+            return s.getSchemaForMethodNamed(self.obj.__func__.__name__)
         # both bound methods and raw callables can also use a .schema
         # attribute
         return getattr(self.obj, "schema", None)
@@ -480,7 +480,7 @@ class RemoteReference(RemoteReferenceOnly):
             # any arguments are of the wrong type
             try:
                 methodSchema.checkAllArgs(args, kwargs, False)
-            except Violation, v:
+            except Violation as v:
                 v.setLocation("%s.%s(%s)" % (interfaceName, methodName,
                                              v.getLocation()))
                 raise
