@@ -57,17 +57,21 @@ class Base(ShouldFailMixin, MakeTubsMixin):
 
     def createInitialReferences(self):
         # we must start by giving Alice a reference to both Bob and Carol.
-        if self.debug: print "Alice gets Bob"
+        if self.debug:
+            print("Alice gets Bob")
         d = self.tubA.getReference(self.bob_url)
         def _aliceGotBob(abob):
-            if self.debug: print "Alice got bob"
+            if self.debug:
+                print("Alice got Bob")
             self.abob = abob # Alice's reference to Bob
-            if self.debug: print "Alice gets carol"
+            if self.debug:
+                print("Alice gets Carol")
             d = self.tubA.getReference(self.carol_url)
             return d
         d.addCallback(_aliceGotBob)
         def _aliceGotCarol(acarol):
-            if self.debug: print "Alice got carol"
+            if self.debug:
+                print("Alice got Carol")
             self.acarol = acarol # Alice's reference to Carol
             d = self.tubB.getReference(self.dave_url)
             return d
@@ -131,23 +135,27 @@ class Gifts(Base, unittest.TestCase):
         d = self.createInitialReferences()
         def _introduce(res):
             d2 = self.bob.waitfor()
-            if self.debug: print "Alice introduces Carol to Bob"
+            if self.debug:
+                print("Alice introduces Carol to Bob")
             # send the gift. This might not get acked by the time the test is
             # done and everything is torn down, so we use callRemoteOnly
             self.abob.callRemoteOnly("set", obj=(self.alice, self.acarol))
             return d2 # this fires with the gift that bob got
         d.addCallback(_introduce)
         def _bobGotCarol((balice,bcarol)):
-            if self.debug: print "Bob got Carol"
+            if self.debug:
+                print("Bob got Carol")
             self.bcarol = bcarol
-            if self.debug: print "Bob says something to Carol"
+            if self.debug:
+                print("Bob says something to Carol")
             d2 = self.carol.waitfor()
             # handle ConnectionDone as described before
             self.bcarol.callRemoteOnly("set", obj=12)
             return d2
         d.addCallback(_bobGotCarol)
         def _carolCalled(res):
-            if self.debug: print "Carol heard from Bob"
+            if self.debug:
+                print("Carol heard from Bob")
             self.failUnlessEqual(res, 12)
         d.addCallback(_carolCalled)
         return d
@@ -175,7 +183,8 @@ class Gifts(Base, unittest.TestCase):
             # (a_cindy). She sends both of them (plus a reference to herself)
             # to bob.
             d2 = self.bob.waitfor()
-            if self.debug: print "Alice introduces Carol to Bob"
+            if self.debug:
+                print("Alice introduces Carol to Bob")
             # send the gift. This might not get acked by the time the test is
             # done and everything is torn down, so explicitly silence any
             # ConnectionDone error that might result. When we get
@@ -186,14 +195,17 @@ class Gifts(Base, unittest.TestCase):
             return d2 # this fires with the gift that bob got
         d.addCallback(_introduce)
         def _bobGotCarol((b_alice,b_carol,b_cindy)):
-            if self.debug: print "Bob got Carol"
+            if self.debug:
+                print("Bob got Carol")
             self.failUnless(b_alice)
             self.failUnless(b_carol)
             self.failUnless(b_cindy)
             self.bcarol = b_carol
-            if self.debug: print "Bob says something to Carol"
+            if self.debug:
+                print("Bob says something to Carol")
             d2 = self.carol.waitfor()
-            if self.debug: print "Bob says something to Cindy"
+            if self.debug:
+                print("Bob says something to Cindy")
             d3 = self.cindy.waitfor()
 
             # handle ConnectionDone as described before
@@ -202,7 +214,8 @@ class Gifts(Base, unittest.TestCase):
             return defer.DeferredList([d2,d3])
         d.addCallback(_bobGotCarol)
         def _carolAndCindyCalled(res):
-            if self.debug: print "Carol heard from Bob"
+            if self.debug:
+                print("Carol heard from Bob")
             ((carol_s, carol_result), (cindy_s, cindy_result)) = res
             self.failUnless(carol_s)
             self.failUnless(cindy_s)
@@ -351,7 +364,8 @@ class Gifts(Base, unittest.TestCase):
     # until I figure out what the new scheme ought to be asserting.
 
     def OFF_bobGotCarol(self, (balice,bcarol)):
-        if self.debug: print "Bob got Carol"
+        if self.debug:
+            print("Bob got Carol")
         # Bob has received the gift
         self.bcarol = bcarol
 
@@ -360,7 +374,8 @@ class Gifts(Base, unittest.TestCase):
         # gift-bearing message is delivered). To make sure alice has received
         # it, send a message back along the same path.
         def _check_alice(res):
-            if self.debug: print "Alice should have the decgift"
+            if self.debug:
+                print("Alice should have the decgift")
             # alice's gift table should be empty
             brokerAB = self.abob.tracker.broker
             self.failUnlessEqual(brokerAB.myGifts, {})
@@ -376,7 +391,8 @@ class Gifts(Base, unittest.TestCase):
         # the recipient to not bother sending a response).
         balice.callRemote("set", 39).addErrback(lambda ignored: None)
 
-        if self.debug: print "Bob says something to Carol"
+        if self.debug:
+            print("Bob says something to Carol")
         d2 = self.carol.waitfor()
         d = self.bcarol.callRemote("set", obj=12)
         d.addCallback(lambda res: d2)
@@ -518,23 +534,27 @@ class LongFURL(Base, unittest.TestCase):
         d = self.createInitialReferences()
         def _introduce(res):
             d2 = self.bob.waitfor()
-            if self.debug: print "Alice introduces Carol to Bob"
+            if self.debug:
+                print("Alice introduces Carol to Bob")
             # send the gift. This might not get acked by the time the test is
             # done and everything is torn down, so we use callRemoteOnly
             self.abob.callRemoteOnly("set", obj=(self.alice, self.acarol))
             return d2 # this fires with the gift that bob got
         d.addCallback(_introduce)
         def _bobGotCarol((balice,bcarol)):
-            if self.debug: print "Bob got Carol"
+            if self.debug:
+                print("Bob got Carol")
             self.bcarol = bcarol
-            if self.debug: print "Bob says something to Carol"
+            if self.debug:
+                print("Bob says something to Carol")
             d2 = self.carol.waitfor()
             # handle ConnectionDone as described before
             self.bcarol.callRemoteOnly("set", obj=12)
             return d2
         d.addCallback(_bobGotCarol)
         def _carolCalled(res):
-            if self.debug: print "Carol heard from Bob"
+            if self.debug:
+                print("Carol heard from Bob")
             self.failUnlessEqual(res, 12)
         d.addCallback(_carolCalled)
         return d
