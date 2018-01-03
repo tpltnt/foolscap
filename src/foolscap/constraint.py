@@ -6,11 +6,11 @@
 # This imports foolscap.tokens, but no other Foolscap modules.
 
 import re
-from zope.interface import implements, Interface
+from zope.interface import implementer, Interface
 
 from foolscap.tokens import Violation, BananaError, SIZE_LIMIT, \
      STRING, LIST, INT, NEG, LONGINT, LONGNEG, VOCAB, FLOAT, OPEN, \
-     tokenNames
+     tokenNames, ISlicer
 
 everythingTaster = {
     # he likes everything
@@ -31,18 +31,20 @@ nothingTaster = {}
 
 class IConstraint(Interface):
     pass
+
 class IRemoteMethodConstraint(IConstraint):
-    def getPositionalArgConstraint(argnum):
+    def getPositionalArgConstraint(self, argnum):
         """Return the constraint for posargs[argnum]. This is called on
         inbound methods when receiving positional arguments. This returns a
         tuple of (accept, constraint), where accept=False means the argument
         should be rejected immediately, regardless of what type it might be."""
-    def getKeywordArgConstraint(argname, num_posargs=0, previous_kwargs=[]):
+
+    def getKeywordArgConstraint(self, argname, num_posargs=0, previous_kwargs=[]):
         """Return the constraint for kwargs[argname]. The other arguments are
         used to handle mixed positional and keyword arguments. Returns a
         tuple of (accept, constraint)."""
 
-    def checkAllArgs(args, kwargs, inbound):
+    def checkAllArgs(self, args, kwargs, inbound):
         """Submit all argument values for checking. When inbound=True, this
         is called after the arguments have been deserialized, but before the
         method is invoked. When inbound=False, this is called just inside
@@ -51,12 +53,14 @@ class IRemoteMethodConstraint(IConstraint):
 
         This should either raise Violation or return None."""
         pass
+
     def getResponseConstraint():
         """Return an IConstraint-providing object to enforce the response
         constraint. This is called on outbound method calls so that when the
         response starts to come back, we can start enforcing the appropriate
         constraint right away."""
-    def checkResults(results, inbound):
+
+    def checkResults(self, results, inbound):
         """Inspect the results of invoking a method call. inbound=False is
         used on the side that hosts the Referenceable, just after the target
         method has provided a value. inbound=True is used on the
@@ -65,14 +69,13 @@ class IRemoteMethodConstraint(IConstraint):
 
         This should either raise Violation or return None."""
 
+@implementer(ISlicer)
 class Constraint(object):
     """
     Each __schema__ attribute is turned into an instance of this class, and
     is eventually given to the unserializer (the 'Unslicer') to enforce as
     the tokens are arriving off the wire.
     """
-
-    implements(IConstraint)
 
     taster = everythingTaster
     """the Taster is a dict that specifies which basic token types are
@@ -116,14 +119,14 @@ class Constraint(object):
                        NEG: None,
                        LONGINT: None, # TODO
                        LONGNEG: None,
-                       FLOAT: None,
-                       }
+                       FLOAT: None}
+
     def checkOpentype(self, opentype):
         """Check the OPEN type (the tuple of Index Tokens). Raise an
         exception if it is not accepted.
         """
 
-        if self.opentypes == None:
+        if self.opentypes is None:
             return
 
         # shared references are always accepted. checkOpentype() is a defense
@@ -236,7 +239,7 @@ class IntegerConstraint(Constraint):
     def __init__(self, maxBytes=-1):
         # -1 means s_int32_t: INT/NEG instead of INT/NEG/LONGINT/LONGNEG
         # None means unlimited
-        assert maxBytes == -1 or maxBytes == None or maxBytes >= 4
+        assert maxBytes == -1 or maxBytes is None or maxBytes >= 4
         self.maxBytes = maxBytes
         self.taster = {INT: None, NEG: None}
         if maxBytes != -1:
@@ -244,7 +247,7 @@ class IntegerConstraint(Constraint):
             self.taster[LONGNEG] = maxBytes
 
     def checkObject(self, obj, inbound):
-        if not isinstance(obj, (int, long)):
+        if not isinstance(obj, int):
             raise Violation("'%r' is not a number" % (obj,))
         if self.maxBytes == -1:
             if obj >= 2**31 or obj < -2**31:
