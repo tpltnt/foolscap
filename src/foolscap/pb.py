@@ -331,7 +331,7 @@ class Tub(service.MultiService):
 
     def setLogGathererFURL(self, gatherer_furl_or_furls):
         assert not self._log_gatherer_furls
-        if isinstance(gatherer_furl_or_furls, basestring):
+        if isinstance(gatherer_furl_or_furls, str):
             self._log_gatherer_furls.append(gatherer_furl_or_furls)
         else:
             self._log_gatherer_furls.extend(gatherer_furl_or_furls)
@@ -558,7 +558,7 @@ class Tub(service.MultiService):
 
     def startService(self):
         service.MultiService.startService(self)
-        for d,sturdy in self._pending_getReferences:
+        for d, sturdy in self._pending_getReferences:
             d1 = eventual.fireEventually(sturdy)
             d1.addCallback(self.getReference)
             d1.addBoth(lambda res, d=d: d.callback(res))
@@ -591,7 +591,7 @@ class Tub(service.MultiService):
         for c in list(self._activeConnectors):
             c.shutdown()
         why = Failure(error.ConnectionDone("Tub.stopService was called"))
-        for b in self.brokers.values():
+        for b in list(self.brokers.values()):
             broker_disconnected = defer.Deferred()
             dl.append(broker_disconnected)
             b._notifyOnConnectionLost(
@@ -671,7 +671,7 @@ class Tub(service.MultiService):
             f.close()
             if need_to_chmod:
                 # XXX: open-to-chmod race here
-                os.chmod(furlFile, 0600)
+                os.chmod(furlFile, 0o600)
         return furl
 
     # this is called by either registerReference or by
@@ -684,7 +684,7 @@ class Tub(service.MultiService):
         if not self.locationHints:
             # without a location, there is no point in giving it a name
             return None
-        if self.referenceToName.has_key(ref):
+        if ref in self.referenceToName:
             return self.referenceToName[ref]
         name = preferred_name
         if not name:
@@ -907,7 +907,7 @@ class Tub(service.MultiService):
         return d
 
     def _createLoopbackBroker(self, tubref):
-        t1,t2 = broker.LoopbackTransport(), broker.LoopbackTransport()
+        t1, t2 = broker.LoopbackTransport(), broker.LoopbackTransport()
         t1.setPeer(t2); t2.setPeer(t1)
         n = negotiate.Negotiation()
         params = n.loopbackDecision()
@@ -982,7 +982,7 @@ class Tub(service.MultiService):
         # this doesn't confuse us.
 
         # the Broker will have already severed all active references
-        for tubref in self.brokers.keys():
+        for tubref in list(self.brokers.keys()):
             if self.brokers[tubref] is broker:
                 del self.brokers[tubref]
 
@@ -993,13 +993,13 @@ class Tub(service.MultiService):
         # 'outbound' is a list of PendingRequest objects (one per message
         # that's waiting on a remote broker to complete).
         output = []
-        all_brokers = self.brokers.items()
-        for tubref,_broker in all_brokers:
+        all_brokers = list(self.brokers.items())
+        for tubref, _broker in all_brokers:
             inbound = _broker.inboundDeliveryQueue[:]
             outbound = [pr
                         for (reqID, pr) in
-                        sorted(_broker.waitingForAnswers.items()) ]
-            output.append( (str(tubref), inbound, outbound) )
-        output.sort(lambda x,y: cmp( (len(x[1]), len(x[2])),
-                                     (len(y[1]), len(y[2])) ))
+                        sorted(_broker.waitingForAnswers.items())]
+            output.append((str(tubref), inbound, outbound))
+        output.sort(lambda x, y: cmp((len(x[1]), len(x[2])),
+                                     (len(y[1]), len(y[2]))))
         return output
